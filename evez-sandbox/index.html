@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>EVEZ Sandbox</title>
+<style>
+:root{--bg:#07090d;--panel:#0d1219;--line:#24303c;--text:#dce8f2;--muted:#7f93a6;--cyan:#55e6ff;--violet:#a88cff;--amber:#ffd166;--red:#ff6b7a;--green:#7dffb2}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 50% -10%,#172331 0,#07090d 42%);color:var(--text);font:14px system-ui,sans-serif}button,input{font:inherit}button{background:#121a23;color:var(--text);border:1px solid #30404e;border-radius:8px;padding:9px 11px}button:active{transform:translateY(1px)}#app{max-width:1200px;margin:auto;padding:12px}.top{display:flex;justify-content:space-between;gap:10px;align-items:center}.brand{font-size:22px;font-weight:800;letter-spacing:.08em}.brand small{font-size:10px;color:var(--cyan)}.toolbar{display:flex;gap:6px;flex-wrap:wrap}.grid{display:grid;grid-template-columns:1.5fr 1fr;gap:10px;margin-top:10px}.panel{background:rgba(13,18,25,.92);border:1px solid var(--line);border-radius:12px;padding:10px;box-shadow:0 10px 40px #0006}.world{position:relative;min-height:560px;overflow:hidden;background:#080d11;border-radius:9px;border:1px solid #1d2a35}.world canvas{width:100%;height:100%;display:block}.hud{position:absolute;inset:8px;pointer-events:none}.badge{display:inline-block;background:#081018dd;border:1px solid #2b4352;border-radius:7px;padding:5px 7px;margin:2px;color:var(--muted)}.badge b{color:var(--text)}.right{display:grid;gap:10px;align-content:start}.tabs{display:flex;gap:5px;overflow:auto}.tabs button.active{border-color:var(--cyan);color:var(--cyan)}.list{max-height:250px;overflow:auto}.row{padding:8px;border-bottom:1px solid #1b2630}.row:last-child{border-bottom:0}.muted{color:var(--muted)}.good{color:var(--green)}.warn{color:var(--amber)}.bad{color:var(--red)}.cyan{color:var(--cyan)}.mono{font:12px ui-monospace,monospace;white-space:pre-wrap}.stat{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.stat div{padding:8px;background:#0a1016;border-radius:7px}.stat b{display:block;font-size:18px}.event{font-size:12px}.footer{color:#607180;text-align:center;padding:12px}.mobile{display:none}@media(max-width:800px){.grid{grid-template-columns:1fr}.world{min-height:430px}.mobile{display:block}.top{align-items:flex-start;flex-direction:column}.stat{grid-template-columns:repeat(2,1fr)}} 
+</style>
+</head>
+<body>
+<div id="app">
+<div class="top"><div class="brand">EVEZ <small>WORLD//0</small></div><div class="toolbar"><button id="new">NEW WORLD</button><button id="tick">RUN</button><button id="pause">PAUSE</button><button id="speed">1×</button></div></div>
+<div class="grid">
+<section class="panel">
+<div class="world"><canvas id="c"></canvas><div class="hud"><span class="badge">seed <b id="seed"></b></span><span class="badge">tick <b id="clock">0</b></span><span class="badge">mode <b id="mode">SIM</b></span></div></div>
+<div class="stat" style="margin-top:8px"><div>Population<b id="pop">0</b></div><div>Institutions<b id="inst">0</b></div><div>Knowledge<b id="know">0</b></div><div>Wealth<b id="wealth">0</b></div><div>Unknowns<b id="unknown">0</b></div><div>Events<b id="events">0</b></div></div>
+</section>
+<aside class="right">
+<section class="panel"><div class="tabs"><button class="active" data-tab="society">SOCIETY</button><button data-tab="agents">AGENTS</button><button data-tab="evidence">EVIDENCE</button><button data-tab="tools">TOOLS</button></div><div id="view"></div></section>
+<section class="panel"><b>EVENT SPINE</b><div id="log" class="list"></div></section>
+<section class="panel"><b>PLAYER INTERVENTION</b><div class="toolbar" style="margin-top:7px"><button data-act="observe">Observe</button><button data-act="trade">Trade</button><button data-act="teach">Teach</button><button data-act="hire">Hire</button><button data-act="investigate">Investigate</button><button data-act="forge">Forge Tool</button><button data-act="release">Release</button></div><p class="muted">Intervention changes the simulation, not a quest list.</p></section>
+</aside>
+</div>
+<div class="footer">WORLD > AGENT. Every meaningful change leaves provenance. Simulated reality never masquerades as the real internet.</div>
+</div>
+<script>
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const canvas=$("#c"),ctx=canvas.getContext("2d");
+let S,run=false,speed=1,tab="society",timer;
+const names=["Ari","Bex","Cai","Dara","Eli","Fenn","Gio","Hana","Ivo","Juno","Kest","Lio","Mara","Nix","Ora","Pax","Quin","Rae","Sia","Tao","Uma","Venn","Wren","Xan","Yara","Zed"];
+const jobs=["farmer","smith","scout","teacher","merchant","healer","builder","scribe","fisher","engineer"];
+const rnd=(a,b)=>Math.floor(Math.random()*(b-a+1))+a, pick=a=>a[rnd(0,a.length-1)], uid=p=>p+"-"+Math.random().toString(36).slice(2,8);
+function fresh(){let seed=Math.random().toString(36).slice(2,10);S={seed,tick:0,wealth:1000,knowledge:0,unknown:8,events:[],evidence:[],tools:[],institutions:[],agents:[],cells:[]};
+for(let i=0;i<rnd(6,10);i++)S.institutions.push({id:uid("inst"),name:pick(["River Guild","Ash Council","North Market","Stone House","Open School","Lantern Company","Red Orchard"]),kind:pick(["guild","market","school","council","company"]),power:rnd(20,80),wealth:rnd(80,300),norm:pick(["reciprocity","status","craft","kinship","evidence"])});
+for(let i=0;i<rnd(18,34);i++)S.agents.push({id:uid("a"),name:names[i%names.length]+" "+String(i+1),job:pick(jobs),x:Math.random(),y:Math.random(),energy:rnd(55,100),wealth:rnd(5,80),trust:rnd(25,75),knowledge:rnd(0,4),institution:pick(S.institutions).id,goal:pick(["security","status","curiosity","wealth","care","freedom"]),alive:true});
+for(let i=0;i<80;i++)S.cells.push({x:Math.random(),y:Math.random(),r:Math.random()});
+S.events.push(["WORLD","Generated a new society from seed "+seed]);render()}
+function log(type,msg){S.events.unshift([type,msg]);S.events=S.events.slice(0,80)}
+function tick(){if(!S)return;for(const a of S.agents){if(!a.alive)continue;a.energy-=Math.random()*2;if(a.energy<15){a.energy+=25;a.wealth=Math.max(0,a.wealth-1);continue}let other=pick(S.agents);if(Math.random()<.08){a.trust=Math.max(0,Math.min(100,a.trust+(other.job===a.job?2:-1)))}if(Math.random()<.05){a.knowledge++;S.knowledge++;log("DISCOVERY",a.name+" learned from "+other.name+" by "+a.job+" exchange")}if(Math.random()<.025){let inst=S.institutions.find(x=>x.id===a.institution);if(inst){inst.wealth+=rnd(1,8);a.wealth+=rnd(0,4)}}a.x=(a.x+(Math.random()-.5)*.03+1)%1;a.y=(a.y+(Math.random()-.5)*.03+1)%1}
+if(Math.random()<.08){S.unknown++;log("UNKNOWN","A new unexplained condition appeared in the world")}if(Math.random()<.06&&S.unknown>0){S.unknown--;S.knowledge++;log("EVIDENCE","An observation reduced an unresolved unknown")}if(Math.random()<.02){let t={id:uid("tool"),name:pick(["Water Ledger","Pattern Loom","Signal Cart","Memory Press","Trade Lens","Field Kit"]),creator:pick(S.agents).id};S.tools.push(t);S.knowledge+=2;log("TOOL",S.agents.find(a=>a.id===t.creator).name+" forged "+t.name)}
+S.tick++;S.wealth+=rnd(-2,7);if(S.tick%10===0)log("SOCIETY","Institutions adapted to changing conditions");render()}
+function intervention(a){let actor=pick(S.agents);if(a==="observe"){S.evidence.push({claim:"A local pattern exists",status:"OBSERVED",source:actor.name,t:S.tick});S.knowledge++;log("OBSERVE",actor.name+" performed a direct observation")}
+if(a==="trade"){actor.wealth+=15;S.wealth-=15;log("TRADE",actor.name+" negotiated a trade")}
+if(a==="teach"){let b=pick(S.agents);b.knowledge++;S.knowledge++;log("TEACH",actor.name+" taught "+b.name)}
+if(a==="hire"){let inst=pick(S.institutions);actor.institution=inst.id;actor.wealth=Math.max(0,actor.wealth-5);log("HIRE",actor.name+" joined "+inst.name)}
+if(a==="investigate"){if(S.unknown>0){S.unknown--;S.knowledge+=2;S.evidence.push({claim:"Unknown investigated",status:"INFERRED",source:actor.name,t:S.tick});log("INVESTIGATE",actor.name+" turned an unknown into an inference")}else log("INVESTIGATE","No unresolved unknown remained")}
+if(a==="forge"){let t={id:uid("tool"),name:"Player-Forged Instrument "+(S.tools.length+1),creator:actor.id};S.tools.push(t);S.knowledge+=3;log("FORGE",actor.name+" created a new capability")}
+if(a==="release"){run=true;log("RELEASE","Player released the population from direct control")}
+render()}
+function render(){if(!S)return;$("#seed").textContent=S.seed;$("#clock").textContent=S.tick;$("#pop").textContent=S.agents.length;$("#inst").textContent=S.institutions.length;$("#know").textContent=S.knowledge;$("#wealth").textContent=S.wealth;$("#unknown").textContent=S.unknown;$("#events").textContent=S.events.length;$("#log").innerHTML=S.events.slice(0,20).map(e=>'<div class="row event"><span class="cyan">'+e[0]+'</span> '+e[1]+'</div>').join("");let html="";
+if(tab==="society")html=S.institutions.map(i=>'<div class="row"><b>'+i.name+'</b><div class="muted">'+i.kind+' · norm '+i.norm+' · power '+i.power+' · wealth '+i.wealth+'</div></div>').join("");
+if(tab==="agents")html=S.agents.slice().sort((a,b)=>b.knowledge-a.knowledge).slice(0,24).map(a=>'<div class="row"><b>'+a.name+'</b> <span class="muted">'+a.job+'</span><div>goal '+a.goal+' · trust '+a.trust+' · knowledge '+a.knowledge+' · energy '+Math.round(a.energy)+'</div></div>').join("");
+if(tab==="evidence")html=(S.evidence.length?S.evidence:([{claim:"No player observations yet",status:"UNKNOWN",source:"system",t:S.tick}])).map(e=>'<div class="row"><b>'+e.status+'</b> '+e.claim+'<div class="muted">source '+e.source+' · tick '+e.t+'</div></div>').join("");
+if(tab==="tools")html=(S.tools.length?S.tools:[{name:"No forged tools yet"}]).map(t=>'<div class="row"><b>'+t.name+'</b><div class="muted">capability artifact · provenance '+(t.creator||"system")+'</div></div>').join("");
+$("#view").innerHTML=html;draw()}
+function draw(){let r=canvas.getBoundingClientRect(),d=devicePixelRatio||1;canvas.width=r.width*d;canvas.height=r.height*d;ctx.setTransform(d,0,0,d,0,0);let w=r.width,h=r.height;ctx.fillStyle="#080d11";ctx.fillRect(0,0,w,h);for(const q of S.cells){ctx.fillStyle=q.r>.7?"#172b24":q.r>.4?"#132331":"#111b25";ctx.beginPath();ctx.arc(q.x*w,q.y*h,q.r*16+2,0,7);ctx.fill()}for(const i of S.institutions){let as=S.agents.filter(a=>a.institution===i.id);if(!as.length)continue;let x=as.reduce((n,a)=>n+a.x,0)/as.length*w,y=as.reduce((n,a)=>n+a.y,0)/as.length*h;ctx.strokeStyle="#2e4655";ctx.beginPath();ctx.arc(x,y,12+i.power/12,0,7);ctx.stroke()}for(const a of S.agents){ctx.fillStyle=a.knowledge>5?"#55e6ff":a.trust>70?"#7dffb2":"#a88cff";ctx.beginPath();ctx.arc(a.x*w,a.y*h,4,0,7);ctx.fill()}}
+$("#new").onclick=fresh;$("#tick").onclick=()=>{run=true};$("#pause").onclick=()=>run=false;$("#speed").onclick=()=>{speed=speed===1?5:speed===5?25:1;$("#speed").textContent=speed+"×"};$$("[data-tab]").forEach(b=>b.onclick=()=>{$$("[data-tab]").forEach(x=>x.classList.remove("active"));b.classList.add("active");tab=b.dataset.tab;render()});$$("[data-act]").forEach(b=>b.onclick=()=>intervention(b.dataset.act));setInterval(()=>{if(run)for(let i=0;i<speed;i++)tick()},250);fresh();
+</script>
+</body>
+</html>
