@@ -23,11 +23,11 @@ GATES=("I","X","H","P90","P180","CP90","CP180")
 
 def ops_for_mapping(parsed, mapping, n):
     out=[]
+    ids=sorted(node["id"] for node in parsed["symbols"])
+    qindex={sid:i % n for i,sid in enumerate(ids)}
     for e in parsed["relations"]:
         r=e["relation"]; src=e["source"]; tgt=e["target"]
-        ordered=sorted([src,tgt])
-        a=ordered.index(src); b=1-a
-        qa=a%n; qb=b%n; g=mapping[r]
+        qa=qindex[src]; qb=qindex[tgt]; g=mapping[r]
         if g=="I": pass
         elif g=="X": out.append(("X",qa))
         elif g=="H": out.append(("H",qa))
