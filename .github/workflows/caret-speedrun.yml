@@ -29,7 +29,7 @@ jobs:
         run: |
           PYTHONPATH=game-agent-infra           python evez-os/tools/caret_quantum_speedrun.py             evez-os/packs/caret/fixtures/demo_geometry.json             -o /tmp/caret_quantum.json
 
-      - name: Exhaustive program synthesis
+      - name: Program synthesis
         run: |
           PYTHONPATH=game-agent-infra           python evez-os/tools/caret_program_synth.py             evez-os/packs/caret/fixtures/demo_geometry.json             --topk 12             --no-rotation-scan             -o /tmp/caret_synth.json
 
@@ -37,9 +37,14 @@ jobs:
         run: |
           python evez-os/tools/caret_invariance_battery.py             evez-os/packs/caret/fixtures/demo_geometry.json             -o /tmp/caret_invariance.json
 
-      - name: Discovery report
+      - name: Anti-pareidolia
         run: |
-          PYTHONPATH=game-agent-infra           python evez-os/tools/caret_discovery_run.py             evez-os/packs/caret/fixtures/demo_geometry.json             --topk 12             --output /tmp/caret_discovery.json
+          PYTHONPATH=game-agent-infra           python evez-os/tools/caret_lap_interpreter.py             evez-os/packs/caret/fixtures/demo_geometry.json             -o /tmp/caret_parse.json
+          python evez-os/tools/caret_pareidolia_gate.py             /tmp/caret_parse.json             --permutations 5000             --seed 1337             > /tmp/caret_pareidolia.json
+
+      - name: Adversarial report
+        run: |
+          PYTHONPATH=game-agent-infra           python evez-os/tools/caret_falsification_runner.py             evez-os/packs/caret/fixtures/demo_geometry.json             --permutations 5000             -o /tmp/caret_falsification.json
 
       - name: Publish results
         uses: actions/upload-artifact@v4
@@ -49,4 +54,5 @@ jobs:
             /tmp/caret_quantum.json
             /tmp/caret_synth.json
             /tmp/caret_invariance.json
-            /tmp/caret_discovery.json
+            /tmp/caret_pareidolia.json
+            /tmp/caret_falsification.json
