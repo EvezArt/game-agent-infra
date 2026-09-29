@@ -7,7 +7,7 @@ high-information symbolic circuits. This is computational quantum simulation,
 not a claim that the source material is extraterrestrial or physically quantum.
 
 Search size:
-  7 gate templates ^ 5 relation classes = 16,807 mappings.
+  9 gate templates ^ 5 relation classes = 59,049 mappings.
 For each mapping, the engine can scan eight rotations.
 
 Stdlib only.
@@ -19,7 +19,7 @@ from pathlib import Path
 from caret_quantum_speedrun import build_relations, run_circuit, rotate_primitives
 
 REL_KEYS=("CONTAINS","ADJACENT","OVERLAP","SYMMETRIC","ORIENTATION")
-GATES=("I","X","H","P90","P180","CP90","CP180")
+GATES=("I","X","H","P90","P180","CP90","CP180","ENT90","ENT180")
 
 def ops_for_mapping(parsed, mapping, n):
     out=[]
@@ -35,13 +35,28 @@ def ops_for_mapping(parsed, mapping, n):
         elif g=="P180": out.append(("PHASE",qa,math.pi))
         elif g=="CP90": out.append(("CPHASE",qa,qb,math.pi/2))
         elif g=="CP180": out.append(("CPHASE",qa,qb,math.pi))
+        elif g=="ENT90":
+            out.extend([("H",qa),("H",qb),("CPHASE",qa,qb,math.pi/2)])
+        elif g=="ENT180":
+            out.extend([("H",qa),("H",qb),("CPHASE",qa,qb,math.pi)])
     return out
+
+def single_qubit_purity(state,n,q):
+    r=[[0j,0j],[0j,0j]]
+    for base in range(1<<(n-1)):
+        low=base & ((1<<q)-1); high=base>>q
+        i0=low | (high<<(q+1)); i1=i0 | (1<<q)
+        a,b=state[i0],state[i1]
+        r[0][0]+=a*a.conjugate(); r[1][1]+=b*b.conjugate()
+        r[0][1]+=a*b.conjugate(); r[1][0]+=b*a.conjugate()
+    return sum(abs(r[i][j])**2 for i in range(2) for j in range(2)).real
 
 def run_and_score(doc,mapping,scan=False):
     parsed,_=build_relations(doc)
     n=max(1,min(4,len(parsed["symbols"])))
     docs=[rotate_primitives(doc,k*math.pi/4) for k in range(8)] if scan else [doc]
     ent=[]
+    purity=[]
     hashes=[]
     for d in docs:
         p,_=build_relations(d)
@@ -49,12 +64,17 @@ def run_and_score(doc,mapping,scan=False):
         st=run_circuit(n,ops)
         probs=[abs(x)**2 for x in st]
         ent.append(-sum(x*math.log2(x) for x in probs if x>1e-15))
+        purity.append(sum(single_qubit_purity(st,n,q) for q in range(n))/n)
         hashes.append(hashlib.sha256(json.dumps(ops,separators=(",",":")).encode()).hexdigest())
     mean=sum(ent)/len(ent)
     spread=math.sqrt(sum((x-mean)**2 for x in ent)/len(ent))
-    # Prefer information-rich circuits that are also rotation-stable.
-    score=mean-0.25*spread+0.001*len(set(hashes))
-    return {"score":score,"mean_entropy_bits":mean,"entropy_spread":spread,"rotations":ent,"op_hashes":hashes}
+    mean_purity=sum(purity)/len(purity)
+    entanglement=max(0.0,1.0-mean_purity)
+    # Prefer information-rich, rotation-stable and nontrivially entangling circuits.
+    score=mean-0.25*spread+0.75*entanglement+0.001*len(set(hashes))
+    return {"score":score,"mean_entropy_bits":mean,"entropy_spread":spread,
+            "mean_single_qubit_purity":mean_purity,"entanglement_indicator":entanglement,
+            "rotations":ent,"op_hashes":hashes}
 
 def synth(doc, topk=12, scan=True):
     results=[]
