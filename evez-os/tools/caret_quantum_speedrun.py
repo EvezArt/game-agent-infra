@@ -88,12 +88,12 @@ def build_relations(doc: dict[str,Any]):
 
 def candidate_circuit(parsed, n):
     ops=[]
-    # Deterministic ordering turns identical diagrams into identical circuits.
+    ids=sorted(node["id"] for node in parsed["symbols"])
+    qindex={sid:i % n for i,sid in enumerate(ids)}
+    # Deterministic symbol->qubit mapping preserves actual graph identity.
     for e in parsed["relations"]:
-        a=int(sorted([e["source"],e["target"]]).index(e["source"]))
-        b=1-a
-        qa=a % n
-        qb=b % n
+        qa=qindex[e["source"]]
+        qb=qindex[e["target"]]
         r=e["relation"]
         if r=="SYMMETRIC":
             ops.append(("H",qa))
