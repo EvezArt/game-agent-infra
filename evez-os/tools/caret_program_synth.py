@@ -56,32 +56,55 @@ def run_and_score(doc,mapping,scan=False):
     n=max(1,min(4,len(parsed["symbols"])))
     docs=[rotate_primitives(doc,k*math.pi/4) for k in range(8)] if scan else [doc]
     ent=[]
-    purity=[]
     hashes=[]
+    seen={}
+    for d in docs:
+        p,_=build_relations(d)
+        ops=ops_for_mapping(p,mapping,n)
+        key=hashlib.sha256(json.dumps(ops,separators=(",",":")).encode()).hexdigest()
+        if key in seen:
+            e=seen[key]
+        else:
+            st=run_circuit(n,ops)
+            probs=[abs(x)**2 for x in st]
+            e=-sum(x*math.log2(x) for x in probs if x>1e-15)
+            seen[key]=e
+        ent.append(e)
+        hashes.append(key)
+    mean=sum(ent)/len(ent)
+    spread=math.sqrt(sum((x-mean)**2 for x in ent)/len(ent))
+    return {"pre_score":mean-0.25*spread+0.001*len(set(hashes)),
+            "mean_entropy_bits":mean,"entropy_spread":spread,"rotations":ent,"op_hashes":hashes}
+
+def _entanglement(doc,mapping,scan):
+    parsed,_=build_relations(doc)
+    n=max(1,min(4,len(parsed["symbols"])))
+    docs=[rotate_primitives(doc,k*math.pi/4) for k in range(8)] if scan else [doc]
+    vals=[]
     for d in docs:
         p,_=build_relations(d)
         ops=ops_for_mapping(p,mapping,n)
         st=run_circuit(n,ops)
-        probs=[abs(x)**2 for x in st]
-        ent.append(-sum(x*math.log2(x) for x in probs if x>1e-15))
-        purity.append(sum(single_qubit_purity(st,n,q) for q in range(n))/n)
-        hashes.append(hashlib.sha256(json.dumps(ops,separators=(",",":")).encode()).hexdigest())
-    mean=sum(ent)/len(ent)
-    spread=math.sqrt(sum((x-mean)**2 for x in ent)/len(ent))
-    mean_purity=sum(purity)/len(purity)
-    entanglement=max(0.0,1.0-mean_purity)
-    # Prefer information-rich, rotation-stable and nontrivially entangling circuits.
-    score=mean-0.25*spread+0.75*entanglement+0.001*len(set(hashes))
-    return {"score":score,"mean_entropy_bits":mean,"entropy_spread":spread,
-            "mean_single_qubit_purity":mean_purity,"entanglement_indicator":entanglement,
-            "rotations":ent,"op_hashes":hashes}
+        purity=sum(single_qubit_purity(st,n,q) for q in range(n))/n
+        vals.append(1.0-purity)
+    return sum(vals)/len(vals)
 
 def synth(doc, topk=12, scan=True):
-    results=[]
+    preliminary=[]
     for values in itertools.product(GATES, repeat=len(REL_KEYS)):
         mapping=dict(zip(REL_KEYS,values))
-        s=run_and_score(doc,mapping,scan=scan)
-        results.append({"mapping":mapping,**s})
+        pre=run_and_score(doc,mapping,scan=scan)
+        preliminary.append({"mapping":mapping,**pre})
+    preliminary.sort(key=lambda x:(-x["pre_score"],x["entropy_spread"],json.dumps(x["mapping"],sort_keys=True)))
+    finalists=preliminary[:max(topk*16,128)]
+    results=[]
+    for item in finalists:
+        entanglement=_entanglement(doc,item["mapping"],scan)
+        score=item["pre_score"]+0.75*entanglement
+        results.append({**item,
+            "score":score,
+            "mean_single_qubit_purity":1.0-entanglement,
+            "entanglement_indicator":entanglement})
     results.sort(key=lambda x:(-x["score"],x["entropy_spread"],json.dumps(x["mapping"],sort_keys=True)))
     return {
         "engine":"EVEZ-CARET-Program-Synthesizer",
@@ -89,6 +112,8 @@ def synth(doc, topk=12, scan=True):
         "mathematical_model":"exact finite-dimensional state-vector simulation",
         "search_space":f"{len(GATES)}^{len(REL_KEYS)}={len(GATES)**len(REL_KEYS)} mappings",
         "rotation_scan":bool(scan),
+        "two_stage_search":True,
+        "purity_evaluated_for":len(finalists),
         "topk":results[:topk],
         "disclaimer":"Generated circuits are candidate mathematical models of symbolic relations. Their ranking does not establish the meaning, origin, or physical efficacy of the source material."
     }
