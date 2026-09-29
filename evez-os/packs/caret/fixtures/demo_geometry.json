@@ -1,0 +1,26 @@
+{
+  "signature_depth": 6,
+  "symbols": [
+    {
+      "id": "A",
+      "primitives": [
+        {"kind": "circle", "cx": 0, "cy": 0, "r": 10},
+        {"kind": "stroke", "points": [[-10, 0], [10, 0]]}
+      ]
+    },
+    {
+      "id": "B",
+      "primitives": [
+        {"kind": "circle", "cx": 0, "cy": 0, "r": 10},
+        {"kind": "stroke", "points": [[0, -10], [0, 10]]}
+      ]
+    },
+    {
+      "id": "C",
+      "primitives": [
+        {"kind": "circle", "cx": 30, "cy": 0, "r": 5},
+        {"kind": "spoke", "points": [[25, 0], [35, 0]]}
+      ]
+    }
+  ]
+}
