@@ -1,0 +1,52 @@
+name: CARET Speedrun
+
+on:
+  push:
+    paths:
+      - "evez-os/tools/caret_*.py"
+      - "evez-os/packs/caret/**"
+      - ".github/workflows/caret-speedrun.yml"
+  workflow_dispatch:
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Unit tests
+        run: |
+          python -m pip install --upgrade pytest
+          PYTHONPATH=game-agent-infra pytest -q             evez-os/packs/caret/tests/test_interpreter.py             evez-os/packs/caret/tests/test_quantum_speedrun.py             evez-os/packs/caret/tests/test_canonical_signature.py
+
+      - name: Quantum speedrun
+        run: |
+          PYTHONPATH=game-agent-infra           python evez-os/tools/caret_quantum_speedrun.py             evez-os/packs/caret/fixtures/demo_geometry.json             -o /tmp/caret_quantum.json
+
+      - name: Exhaustive program synthesis
+        run: |
+          PYTHONPATH=game-agent-infra           python evez-os/tools/caret_program_synth.py             evez-os/packs/caret/fixtures/demo_geometry.json             --topk 12             --no-rotation-scan             -o /tmp/caret_synth.json
+
+      - name: Invariance
+        run: |
+          python evez-os/tools/caret_invariance_battery.py             evez-os/packs/caret/fixtures/demo_geometry.json             -o /tmp/caret_invariance.json
+
+      - name: Discovery report
+        run: |
+          PYTHONPATH=game-agent-infra           python evez-os/tools/caret_discovery_run.py             evez-os/packs/caret/fixtures/demo_geometry.json             --topk 12             --output /tmp/caret_discovery.json
+
+      - name: Publish results
+        uses: actions/upload-artifact@v4
+        with:
+          name: caret-speedrun
+          path: |
+            /tmp/caret_quantum.json
+            /tmp/caret_synth.json
+            /tmp/caret_invariance.json
+            /tmp/caret_discovery.json
