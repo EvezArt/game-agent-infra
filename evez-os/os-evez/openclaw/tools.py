@@ -1,5 +1,5 @@
 """openclaw.tools — bounded tool executor (FS_READ, FS_WRITE, SHELL)."""
-import subprocess, os
+import subprocess, os, shlex
 from pathlib import Path
 from .policy import load_policy, check_kill_switch, assert_fs_read, assert_fs_write, assert_shell
 
@@ -34,6 +34,12 @@ class ToolRunner:
     def run_shell(self, cmd: str, timeout=30) -> str:
         self._check()
         if not assert_shell(self.policy, cmd):
-            raise PermissionError(f"SHELL denied: {cmd}")
-        result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=timeout)
-        return result.stdout + result.stderr
+            raise PermissionError("SHELL denied by allowlist or sandbox policy")
+        argv = shlex.split(cmd)
+        jail = Path(self.policy["capabilities"]["SHELL"].get("workdir_jail", "./sandboxes")).resolve()
+        jail.mkdir(parents=True, exist_ok=True)
+        result = subprocess.run(
+            argv, shell=False, cwd=str(jail), capture_output=True,
+            text=True, timeout=min(max(int(timeout), 1), 30)
+        )
+        return (result.stdout + result.stderr)[:10000]
