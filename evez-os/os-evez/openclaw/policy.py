@@ -28,13 +28,23 @@ def check_kill_switch(policy: dict, data_dir: Path) -> bool:
 
 
 def assert_fs_read(policy: dict, path: str) -> bool:
+    target = Path(path).expanduser().resolve()
     allowed = policy["capabilities"]["FS_READ"].get("allow_paths", [])
-    return any(path.startswith(p) for p in allowed)
+    for item in allowed:
+        root = Path(item).expanduser().resolve()
+        if target == root or root in target.parents:
+            return True
+    return False
 
 
 def assert_fs_write(policy: dict, path: str) -> bool:
+    target = Path(path).expanduser().resolve()
     allowed = policy["capabilities"]["FS_WRITE"].get("allow_paths", [])
-    return any(path.startswith(p) for p in allowed)
+    for item in allowed:
+        root = Path(item).expanduser().resolve()
+        if target == root or root in target.parents:
+            return True
+    return False
 
 
 def assert_shell(policy: dict, cmd: str) -> bool:
