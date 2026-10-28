@@ -1,5 +1,6 @@
 """openclaw.policy — YAML allowlist loader + capability enforcer."""
 import yaml
+import shlex
 from pathlib import Path
 
 DEFAULT_POLICY = {
@@ -37,5 +38,20 @@ def assert_fs_write(policy: dict, path: str) -> bool:
 
 
 def assert_shell(policy: dict, cmd: str) -> bool:
+    """Reject shell operators; only the first executable may come from policy."""
+    if not isinstance(cmd, str) or not cmd.strip():
+        return False
+    if any(op in cmd for op in (";", "|", "&", ">", "<", chr(96), "$", "\\n", "\\r")):
+        return False
+    try:
+        argv = shlex.split(cmd)
+    except ValueError:
+        return False
     allowed = policy["capabilities"]["SHELL"].get("allow_commands", [])
-    return cmd.split()[0] in allowed if cmd.strip() else False
+    if not argv or argv[0] not in allowed:
+        return False
+    if argv[0] == "python":
+        return False
+    if argv[0] == "pwd":
+        return len(argv) == 1
+    return True
