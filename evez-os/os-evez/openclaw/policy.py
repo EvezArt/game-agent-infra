@@ -7,7 +7,7 @@ DEFAULT_POLICY = {
     "capabilities": {
         "FS_READ": {"allow_paths": ["./runs", "./fixtures", "./state"]},
         "FS_WRITE": {"allow_paths": ["./runs", "./state"]},
-        "SHELL": {"allow_commands": ["ls", "cat", "echo", "python", "ffmpeg"], "workdir_jail": "./sandboxes"},
+        "SHELL": {"allow_commands": ["pwd", "ls", "cat", "echo"], "workdir_jail": "./sandboxes"},
         "NET_OUT": {"enabled": False},
     },
     "kill_switch": {"stop_file": "./state/STOP"},
@@ -60,7 +60,7 @@ def assert_shell(policy: dict, cmd: str) -> bool:
     allowed = policy["capabilities"]["SHELL"].get("allow_commands", [])
     if not argv or argv[0] not in allowed:
         return False
-    if argv[0] == "python":
+    if argv[0] in {"python", "python3", "ffmpeg", "bash", "sh", "zsh"}:
         return False
     if argv[0] == "pwd":
         return len(argv) == 1
