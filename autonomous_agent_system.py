@@ -30,13 +30,24 @@ class AutonomousAgent:
         if argv[0] == "pwd" and len(argv) == 1:
             pass
         elif argv[0] == "ls":
-            pass
+            for arg in argv[1:]:
+                if arg.startswith("-"):
+                    if arg not in {"-l", "-a", "-la", "-al", "--all"}:
+                        return {"stdout": "", "stderr": "Unsupported ls option", "returncode": 2}
+                else:
+                    target = Path(arg).expanduser()
+                    if not target.is_absolute():
+                        target = self.workspace / target
+                    target = target.resolve()
+                    root = self.workspace.resolve()
+                    if target != root and root not in target.parents:
+                        return {"stdout": "", "stderr": "ls path is outside EVEZ_WORKSPACE_ROOT", "returncode": 2}
         elif argv[0] == "git" and len(argv) >= 2 and argv[1] in {"status", "diff"}:
             if len(argv) > 2:
                 return {"stdout": "", "stderr": "Git arguments are blocked", "returncode": 2}
         else:
             return {"stdout": "", "stderr": "Allowed commands: pwd, ls, git status, git diff", "returncode": 2}
-        result = subprocess.run(argv, shell=False, capture_output=True, text=True, timeout=30)
+        result = subprocess.run(argv, shell=False, cwd=str(self.workspace), capture_output=True, text=True, timeout=30)
         return {"stdout": result.stdout, "stderr": result.stderr, "returncode": result.returncode}
     
     def git_operation(self, repo_path, operation):
