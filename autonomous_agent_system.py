@@ -5,6 +5,7 @@ No spiritual nonsense - actual working code
 """
 
 import subprocess
+import shlex
 import json
 import time
 from pathlib import Path
@@ -15,8 +16,25 @@ class AutonomousAgent:
         self.state = "running"
         
     def execute_task(self, command):
-        """Execute Unix commands autonomously"""
-        result = subprocess.run(command, shell=True, capture_output=True, text=True)
+        """Execute only read-only inspection commands; arbitrary shell is disabled."""
+        if not isinstance(command, str) or any(op in command for op in (";", "|", "&", ">", "<", "`", "$", "\n", "\r")):
+            return {"stdout": "", "stderr": "Shell syntax is blocked", "returncode": 2}
+        try:
+            argv = shlex.split(command)
+        except ValueError as exc:
+            return {"stdout": "", "stderr": str(exc), "returncode": 2}
+        if not argv:
+            return {"stdout": "", "stderr": "Command required", "returncode": 2}
+        if argv[0] == "pwd" and len(argv) == 1:
+            pass
+        elif argv[0] == "ls":
+            pass
+        elif argv[0] == "git" and len(argv) >= 2 and argv[1] in {"status", "diff"}:
+            if len(argv) > 2:
+                return {"stdout": "", "stderr": "Git arguments are blocked", "returncode": 2}
+        else:
+            return {"stdout": "", "stderr": "Allowed commands: pwd, ls, git status, git diff", "returncode": 2}
+        result = subprocess.run(argv, shell=False, capture_output=True, text=True, timeout=30)
         return {"stdout": result.stdout, "stderr": result.stderr, "returncode": result.returncode}
     
     def git_operation(self, repo_path, operation):
