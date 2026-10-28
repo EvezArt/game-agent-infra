@@ -54,4 +54,19 @@ def assert_shell(policy: dict, cmd: str) -> bool:
         return False
     if argv[0] == "pwd":
         return len(argv) == 1
+    jail = Path(policy["capabilities"]["SHELL"].get("workdir_jail", "./sandboxes")).resolve()
+    if argv[0] == "echo":
+        return True
+    for arg in argv[1:]:
+        if arg.startswith("-"):
+            allowed_options = {"-l", "-a", "-la", "-al", "-n"}
+            if arg not in allowed_options:
+                return False
+            continue
+        target = Path(arg).expanduser()
+        if not target.is_absolute():
+            target = jail / target
+        target = target.resolve()
+        if target != jail and jail not in target.parents:
+            return False
     return True
