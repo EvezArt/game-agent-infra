@@ -14,8 +14,6 @@ capabilities:
       - "ls"
       - "cat"
       - "echo"
-      - "python"
-      - "ffmpeg"
     workdir_jail: "./sandboxes"
   NET_OUT:
     enabled: false
