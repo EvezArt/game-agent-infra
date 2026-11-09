@@ -19,7 +19,7 @@
 
 - **2026-05-18 23:15** [system] test: This is a test memory
 
-- **2026-05-18 23:15** [credentials] standardcompute_api_key: sk_live_ds3XDRK3hW1uc5pgxFtVpzsrcwb_RwvP9m8i5-2pCyc
+- **2026-05-18 23:15** [credentials] standardcompute_api_key: __STANDARDCOMPUTE_API_KEY__
 
 - **2026-05-18 23:15** [config] standardcompute_base_url: https://api.stdcmpt.com/v1
 
