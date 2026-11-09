@@ -33,7 +33,7 @@ openclaw config set models.mode merge
 cat > /tmp/stdcmpt.json << 'EOF'
 {
   "baseUrl": "https://api.stdcmpt.com/v1",
-  "apiKey": "sk_live_ds3XDRK3hW1uc5pgxFtVpzsrcwb_RwvP9m8i5-2pCyc",
+  "apiKey": "__STANDARDCOMPUTE_API_KEY__",
   "api": "openai-responses",
   "models": [
     {
