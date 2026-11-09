@@ -41,7 +41,7 @@ def use_standard_compute(prompt):
     """Fallback to Standard Compute"""
     result = subprocess.run([
         "curl", "-s", "-X", "POST", "https://api.stdcmpt.com/v1/completions",
-        "-H", "Authorization: Bearer sk_live_ds3XDRK3hW1uc5pgxFtVpzsrcwb_RwvP9m8i5-2pCyc",
+        "-H", "Authorization: Bearer __STANDARDCOMPUTE_API_KEY__",
         "-H", "Content-Type: application/json",
         "-d", json.dumps({"model": "standardcompute", "prompt": prompt, "max_tokens": 300})
     ], capture_output=True, text=True)
